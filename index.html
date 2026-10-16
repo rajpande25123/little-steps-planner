@@ -1,0 +1,233 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f8f3fa">
+  <title>Little Steps — My Planner</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="supabase-config.js"></script>
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand-mark">✿</div>
+      <div class="brand-name">little steps<span>my personal planner</span></div>
+      <nav class="nav-links" aria-label="Main navigation">
+        <button class="nav-btn active" data-view="home">⌂ <span>Home</span></button>
+        <button class="nav-btn" data-view="calendar">▦ <span>Calendar</span></button>
+        <button class="nav-btn" data-view="tasks">☑ <span>To-do list</span></button>
+        <button class="nav-btn" data-view="tiffin">♡ <span>Tiffin tracker</span></button>
+        <button class="nav-btn" data-view="timetable">◷ <span>Daily plan</span></button>
+        <button class="nav-btn" data-view="gym">✦ <span>Gym plan</span></button>
+      </nav>
+      <div class="sidebar-note">
+        <span class="sparkle">✦</span>
+        <p>Small steps<br>make big progress.</p>
+        <span class="note-heart">♡</span>
+      </div>
+      <div class="sidebar-footer">made for your better days ♡</div>
+    </aside>
+
+    <main class="main-content">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">A LITTLE SPACE FOR YOU</p>
+          <h1 id="greeting">Today, one step at a time <span>♡</span></h1>
+        </div>
+        <button id="today-pill" class="today-pill" title="Return to today">Today · <span id="today-short"></span></button>
+      </header>
+
+      <section class="cloud-auth-card card" aria-labelledby="cloud-auth-title">
+        <div class="cloud-auth-copy">
+          <p class="eyebrow">YOUR PLANNER, ON ALL YOUR DEVICES</p>
+          <h2 id="cloud-auth-title">Cloud sync <span>♡</span></h2>
+          <p id="cloud-status" class="muted small" role="status">Sign in to sync your planner securely between devices.</p>
+        </div>
+        <form id="cloud-auth-form" class="cloud-auth-form">
+          <label class="sr-only" for="cloud-email">Email address</label>
+          <input id="cloud-email" type="email" autocomplete="email" placeholder="Email address" required>
+          <label class="sr-only" for="cloud-password">Password</label>
+          <input id="cloud-password" type="password" autocomplete="current-password" minlength="8" placeholder="Password (8+ characters)" required>
+          <div class="cloud-auth-actions">
+            <button id="cloud-sign-in" class="primary-button" type="submit">Sign in</button>
+            <button id="cloud-sign-up" class="secondary-button" type="button">Create account</button>
+            <button id="cloud-sign-out" class="secondary-button hidden" type="button">Sign out</button>
+          </div>
+        </form>
+      </section>
+
+      <section id="home-view" class="view active">
+        <div class="hero-grid">
+          <article class="date-hero card">
+            <div class="date-copy">
+              <p class="eyebrow">YOUR DAY, YOUR PACE</p>
+              <h2 id="hero-weekday">MONDAY</h2>
+              <div id="hero-date" class="hero-date">25</div>
+              <p id="hero-month" class="hero-month">October 2026</p>
+              <p class="affirmation">You don't have to do it all.<br>Just take the next small step.</p>
+            </div>
+            <div class="calendar-illustration" aria-hidden="true">
+              <div class="calendar-rings"><i></i><i></i></div>
+              <div class="calendar-top"><span></span><span></span><span></span></div>
+              <div class="calendar-number" id="calendar-number">25</div>
+              <div class="calendar-flower">✿</div>
+            </div>
+            <div class="hero-doodle">♡</div>
+          </article>
+          <article class="progress-card card">
+            <div class="card-heading">
+              <div><p class="eyebrow">A LITTLE PROGRESS</p><h3>Today's progress</h3></div>
+              <span class="mini-flower">✿</span>
+            </div>
+            <div class="progress-ring-wrap">
+              <div class="progress-ring" id="progress-ring"><div><strong id="progress-percent">0%</strong><span>completed</span></div></div>
+            </div>
+            <p id="progress-caption" class="muted center">Every little effort counts.</p>
+            <div class="tiny-progress"><span id="tiny-progress-fill"></span></div>
+            <p class="muted small center"><span id="progress-count">0 of 0</span> tasks done</p>
+          </article>
+        </div>
+
+        <div class="section-heading">
+          <div><p class="eyebrow">MAKE TODAY COUNT</p><h2>Today's to-do list <span>♡</span></h2></div>
+          <button class="text-button" data-go="tasks">See all tasks ↗</button>
+        </div>
+        <div class="home-task-layout">
+          <article class="card task-card">
+            <div class="card-heading"><h3>Top 3 tasks</h3><span class="pill">your priorities</span></div>
+            <div id="home-priority-list" class="check-list"></div>
+            <button class="add-task-inline" id="add-task-home">＋ Add a task</button>
+          </article>
+          <article class="card routine-card">
+            <div class="card-heading"><h3>My daily rhythm</h3><span class="sun-icon">☼</span></div>
+            <div class="routine-row"><span class="routine-time">6:45 AM</span><span>Japanese N5 practice</span><span class="routine-dot lavender"></span></div>
+            <div class="routine-row"><span class="routine-time">8:15 AM</span><span>College subject study</span><span class="routine-dot peach"></span></div>
+            <div class="routine-row"><span class="routine-time">10–5</span><span>College</span><span class="routine-dot green"></span></div>
+            <div class="routine-row"><span class="routine-time">5–7 PM</span><span>Gym + travel</span><span class="routine-dot pink"></span></div>
+            <div class="routine-row"><span class="routine-time">8 PM</span><span>Coding practice</span><span class="routine-dot blue"></span></div>
+            <div class="routine-row"><span class="routine-time">9:15 PM</span><span>English + daily revision</span><span class="routine-dot yellow"></span></div>
+            <p class="routine-footnote">Adjust these times to match your mess and commute ♡</p>
+          </article>
+        </div>
+
+        <div class="bottom-grid">
+          <article class="card english-card">
+            <div class="card-heading"><div><p class="eyebrow">SPEAK A LITTLE EVERY DAY</p><h3>English confidence corner</h3></div><span class="english-icon">Aa</span></div>
+            <p class="muted">Today's 10-minute challenge</p>
+            <p class="english-prompt" id="english-prompt">Introduce yourself and describe what you learned today.</p>
+            <div class="english-actions"><button id="new-prompt" class="soft-button">New prompt ↻</button><label class="tiny-check"><input type="checkbox" id="english-done"> I practised today</label></div>
+          </article>
+          <article class="card tiffin-mini">
+            <div class="card-heading"><div><p class="eyebrow">LITTLE EXPENSE TRACKER</p><h3>Today's tiffin</h3></div><span class="tiffin-heart">♡</span></div>
+            <p class="muted">₹50 for each tiffin</p>
+            <div class="tiffin-choice">
+              <label><input type="checkbox" id="tiffin-one"> <span>1 tiffin</span></label>
+              <label><input type="checkbox" id="tiffin-two"> <span>2 tiffins</span></label>
+            </div>
+            <div class="tiffin-today-total"><span>Today's total</span><strong id="today-tiffin-total">₹0</strong></div>
+            <button class="text-button" data-go="tiffin">View monthly total ↗</button>
+          </article>
+        </div>
+      </section>
+
+      <section id="calendar-view" class="view">
+        <div class="page-intro"><p class="eyebrow">YOUR MONTH AT A GLANCE</p><h2>A calendar full of little wins <span>♡</span></h2><p class="muted">Tap any day to see its tasks and notes.</p></div>
+        <article class="card calendar-card">
+          <div class="calendar-title-row">
+            <div><h2 id="calendar-month-title">OCTOBER</h2><p id="calendar-year-title">2026</p></div>
+            <div class="month-controls"><button id="prev-month" aria-label="Previous month">‹</button><button id="next-month" aria-label="Next month">›</button></div>
+          </div>
+          <div class="month-grid" id="month-grid"></div>
+          <div class="calendar-key">
+            <span><i class="key-dot task-key"></i> has tasks</span>
+            <span><i class="key-dot done-key"></i> all done</span>
+            <span><i class="key-dot selected-key"></i> selected day</span>
+          </div>
+        </article>
+        <article class="card selected-day-card">
+          <div class="card-heading"><div><p class="eyebrow">YOUR SELECTED DAY</p><h3 id="selected-day-title">Today</h3></div><button id="selected-day-today" class="soft-button">Go to today</button></div>
+          <div id="selected-day-content"></div>
+        </article>
+      </section>
+
+      <section id="tasks-view" class="view">
+        <div class="page-intro"><p class="eyebrow">ONE THING AT A TIME</p><h2>Today's to-do list <span>♡</span></h2><p class="muted">Unfinished tasks from previous days roll forward automatically.</p></div>
+        <article class="card task-manager">
+          <div class="task-input-row"><input id="new-task-input" type="text" maxlength="140" placeholder="Write a task, big or small…"><select id="task-category"><option value="Personal">Personal</option><option value="College">College</option><option value="Coding">Coding</option><option value="English">English</option><option value="Japanese">Japanese</option><option value="Health">Health</option></select><button id="add-task-button" class="primary-button">＋ Add</button></div>
+          <div class="task-filters"><button class="filter-btn active" data-filter="all">All tasks</button><button class="filter-btn" data-filter="open">To do</button><button class="filter-btn" data-filter="done">Completed</button></div>
+          <div id="task-manager-list" class="check-list large-list"></div>
+          <div id="empty-tasks" class="empty-state hidden"><span>✿</span><h3>A little breathing room</h3><p>No tasks here yet. Add one small step to begin.</p></div>
+          <div class="add-task-footnote">♡ Tip: make tasks small enough to finish in one sitting.</div>
+        </article>
+      </section>
+
+      <section id="tiffin-view" class="view">
+        <div class="page-intro"><p class="eyebrow">KEEP TRACK, STRESS LESS</p><h2>My tiffin tracker <span>♡</span></h2><p class="muted">Each tiffin costs ₹50. Select the number you took each day.</p></div>
+        <div class="tiffin-summary-grid">
+          <article class="card summary-tile"><span class="summary-icon lavender-bg">♡</span><p class="muted">Tiffins this month</p><strong id="month-tiffin-count">0</strong><span class="muted small">individual tiffins</span></article>
+          <article class="card summary-tile"><span class="summary-icon pink-bg">₹</span><p class="muted">Monthly total</p><strong id="month-tiffin-cost">₹0</strong><span class="muted small">at ₹50 each</span></article>
+          <article class="card summary-tile"><span class="summary-icon green-bg">▦</span><p class="muted">Days recorded</p><strong id="month-tiffin-days">0</strong><span class="muted small">days with a record</span></article>
+        </div>
+        <article class="card tiffin-month-card">
+          <div class="calendar-title-row"><div><h2 id="tiffin-month-title">OCTOBER 2026</h2><p class="muted">Tap a day to update tiffins</p></div><div class="month-controls"><button id="tiffin-prev-month" aria-label="Previous month">‹</button><button id="tiffin-next-month" aria-label="Next month">›</button></div></div>
+          <div id="tiffin-month-grid" class="tiffin-month-grid"></div>
+          <div class="tiffin-legend"><span>0 = none</span><span>1 = ₹50</span><span>2 = ₹100</span></div>
+        </article>
+        <article class="card tiffin-record-card">
+          <div class="card-heading"><div><p class="eyebrow">SELECTED DAY</p><h3 id="tiffin-selected-title">Today's tiffin</h3></div><span class="tiffin-heart">♡</span></div>
+          <div class="tiffin-editor"><button class="tiffin-option" data-count="0"><span>0</span><small>None</small></button><button class="tiffin-option" data-count="1"><span>1</span><small>tiffin · ₹50</small></button><button class="tiffin-option" data-count="2"><span>2</span><small>tiffins · ₹100</small></button></div>
+          <div class="tiffin-today-total"><span>Selected day's cost</span><strong id="selected-tiffin-cost">₹0</strong></div>
+          <p class="muted small">Your records are saved in this browser on this device.</p>
+        </article>
+      </section>
+
+      <section id="timetable-view" class="view">
+        <div class="page-intro"><p class="eyebrow">A ROUTINE THAT FITS REAL LIFE</p><h2>My daily timetable <span>♡</span></h2><p class="muted">College 10 AM–5 PM · Gym 5–7 PM · Tick each block as you complete it.</p></div>
+        <article class="card timetable-card">
+          <div class="card-heading"><div><p class="eyebrow">TODAY'S FLOW</p><h3>One day at a time</h3></div><span class="pill" id="routine-date-label">Today</span></div>
+          <div class="routine-progress"><span id="routine-progress-fill"></span></div><p class="muted small" id="routine-progress-label">0 of 10 blocks complete</p>
+          <div class="daily-schedule" id="daily-schedule">
+            <label class="schedule-item"><input type="checkbox" data-routine="wake"><span class="schedule-time">6:45–7:00</span><span class="schedule-copy"><strong>Wake up + freshen up</strong><small>Water, wash, make your bed</small></span><i class="schedule-dot lavender"></i></label>
+            <label class="schedule-item"><input type="checkbox" data-routine="japanese"><span class="schedule-time">7:00–7:30</span><span class="schedule-copy"><strong>Japanese N5</strong><small>Vocabulary, kana or grammar</small></span><i class="schedule-dot blue"></i></label>
+            <label class="schedule-item"><input type="checkbox" data-routine="breakfast"><span class="schedule-time">7:30–8:00</span><span class="schedule-copy"><strong>Breakfast + get ready</strong><small>Pack what you need for college</small></span><i class="schedule-dot peach"></i></label>
+            <label class="schedule-item"><input type="checkbox" data-routine="revision"><span class="schedule-time">8:00–9:00</span><span class="schedule-copy"><strong>College subject revision</strong><small>Recall yesterday's notes, solve 2–3 questions</small></span><i class="schedule-dot green"></i></label>
+            <label class="schedule-item"><input type="checkbox" data-routine="commute"><span class="schedule-time">9:00–10:00</span><span class="schedule-copy"><strong>Travel / prepare for college</strong><small>Use spare time for flashcards, not pressure</small></span><i class="schedule-dot yellow"></i></label>
+            <label class="schedule-item fixed"><span class="schedule-time">10:00–5:00</span><span class="schedule-copy"><strong>College</strong><small>Attend classes; note doubts and deadlines</small></span><i class="schedule-dot green"></i></label>
+            <label class="schedule-item fixed"><span class="schedule-time">5:00–7:00</span><span class="schedule-copy"><strong>Gym + travel</strong><small>Follow the weekly gym plan; hydrate</small></span><i class="schedule-dot pink"></i></label>
+            <label class="schedule-item"><input type="checkbox" data-routine="dinner"><span class="schedule-time">7:00–8:00</span><span class="schedule-copy"><strong>Shower, dinner + rest</strong><small>Eat properly and recover</small></span><i class="schedule-dot peach"></i></label>
+            <label class="schedule-item"><input type="checkbox" data-routine="coding"><span class="schedule-time">8:00–9:00</span><span class="schedule-copy"><strong>Coding / web development</strong><small>Build one small feature or solve problems</small></span><i class="schedule-dot blue"></i></label>
+            <label class="schedule-item"><input type="checkbox" data-routine="english"><span class="schedule-time">9:00–9:15</span><span class="schedule-copy"><strong>English speaking practice</strong><small>Speak aloud for 5 minutes + record 1 minute</small></span><i class="schedule-dot lavender"></i></label>
+            <label class="schedule-item"><input type="checkbox" data-routine="review"><span class="schedule-time">9:15–9:35</span><span class="schedule-copy"><strong>Daily recap + plan tomorrow</strong><small>Recall key points, choose top 3 tasks</small></span><i class="schedule-dot yellow"></i></label>
+            <label class="schedule-item"><input type="checkbox" data-routine="sleep"><span class="schedule-time">10:15 PM</span><span class="schedule-copy"><strong>Wind down and sleep</strong><small>Aim for 7–9 hours of sleep</small></span><i class="schedule-dot green"></i></label>
+          </div>
+          <p class="routine-footnote">If assignments or travel take longer, shorten coding or Japanese—not sleep. Keep the plan flexible ♡</p>
+        </article>
+      </section>
+
+      <section id="gym-view" class="view">
+        <div class="page-intro"><p class="eyebrow">BUILD STRENGTH, KEEP RECOVERING</p><h2>My weekly gym plan <span>♡</span></h2><p class="muted">Six training days (Monday–Saturday) in your 5–7 PM gym window. Sunday is the only full rest day.</p></div>
+        <div class="gym-notice"><strong>Simple rules:</strong> warm up for 5–10 minutes, use a weight you can control, stop if you feel sharp pain, and add weight only when all reps feel solid. Ask a trainer to check your form.</div>
+        <div class="gym-week-grid">
+          <article class="card gym-day"><div class="gym-day-head"><span class="gym-day-name">MON</span><span class="gym-focus">Upper body A</span></div><ul><li>Chest press — 3 × 8–12</li><li>Lat pulldown — 3 × 8–12</li><li>Seated cable row — 2 × 10–12</li><li>Shoulder press — 2 × 8–12</li><li>Triceps pushdown — 2 × 10–15</li><li>Biceps curl — 2 × 10–15</li></ul><p class="gym-tip">Rest 60–120 sec between sets.</p></article>
+          <article class="card gym-day"><div class="gym-day-head"><span class="gym-day-name">TUE</span><span class="gym-focus">Lower body A</span></div><ul><li>Goblet squat or leg press — 3 × 8–12</li><li>Romanian deadlift — 3 × 8–10</li><li>Leg curl — 2 × 10–15</li><li>Calf raise — 3 × 12–15</li><li>Plank — 3 × 20–45 sec</li></ul><p class="gym-tip">Keep the movement controlled.</p></article>
+          <article class="card gym-day"><div class="gym-day-head"><span class="gym-day-name">WED</span><span class="gym-focus">Back + rear delts + core</span></div><ul><li>Lat pulldown — 3 × 8–12</li><li>Chest-supported row — 3 × 8–12</li><li>Face pulls — 2 × 12–15</li><li>Rear-delt fly — 2 × 12–15</li><li>Hammer curls — 2 × 10–15</li><li>Dead bug — 3 × 10 each side</li></ul><p class="gym-tip">Train with controlled reps; this is a regular gym day.</p></article>
+          <article class="card gym-day"><div class="gym-day-head"><span class="gym-day-name">THU</span><span class="gym-focus">Upper body B</span></div><ul><li>Incline dumbbell press — 3 × 8–12</li><li>Assisted pull-up / pulldown — 3 × 8–12</li><li>One-arm dumbbell row — 2 × 10 each side</li><li>Lateral raise — 2 × 12–15</li><li>Triceps extension — 2 × 10–15</li><li>Hammer curl — 2 × 10–15</li></ul><p class="gym-tip">Prioritize good form over heavier weights.</p></article>
+          <article class="card gym-day"><div class="gym-day-head"><span class="gym-day-name">FRI</span><span class="gym-focus">Lower body B</span></div><ul><li>Leg press / squat — 3 × 8–12</li><li>Hip thrust — 3 × 8–12</li><li>Leg extension — 2 × 10–15</li><li>Leg curl — 2 × 10–15</li><li>Calf raise — 2 × 12–15</li><li>Dead bug — 2 × 10 each side</li></ul><p class="gym-tip">Use a comfortable range of motion.</p></article>
+          <article class="card gym-day"><div class="gym-day-head"><span class="gym-day-name">SAT</span><span class="gym-focus">Light full body</span></div><ul><li>Chest-supported row — 2 × 10–12</li><li>Push-ups / chest press — 2 × 8–12</li><li>Bodyweight squat — 2 × 12</li><li>Farmer carry — 3 short walks</li><li>Easy cardio — 10–15 min</li></ul><p class="gym-tip">This is still a gym day: keep the weights moderate and focus on clean technique.</p></article>
+          <article class="card gym-day rest-day"><div class="gym-day-head"><span class="gym-day-name">SUN</span><span class="gym-focus">Full rest ♡</span></div><div class="rest-illustration">☁︎</div><p>No gym and no guilt. Eat regular meals, hydrate, sleep well and do only gentle walking if you want.</p><p class="gym-tip">Recovery is part of muscle growth.</p></article>
+        </div>
+        <article class="card gym-guidance"><h3>Progress without overdoing it</h3><ul><li>Start with light weights for the first 1–2 weeks to learn technique.</li><li>When you can complete the top end of the rep range with good form, increase the weight a little next time.</li><li>For muscle gain, eat enough overall food and include a protein source in each meal; avoid crash diets.</li><li>Monday through Saturday are training days; keep Saturday moderate if fatigue builds. Sunday is the only planned rest day.</li><li>If you miss a workout, continue with the next planned day—don't double up to compensate.</li></ul></article>
+      </section>
+
+      <footer class="app-footer">Progress, not perfection. ♡ <span id="footer-date"></span></footer>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,9 @@
+{
+  "appId": "app.littlesteps.planner",
+  "appName": "Little Steps Planner",
+  "webDir": "www",
+  "bundledWebRuntime": false,
+  "android": {
+    "allowMixedContent": false
+  }
+}
