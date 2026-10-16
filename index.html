@@ -10,6 +10,7 @@
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Patrick+Hand&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="supabase-config.js"></script>
 </head>
 <body>
@@ -23,6 +24,7 @@
         <button class="nav-btn" data-view="tasks">☑ <span>To-do list</span></button>
         <button class="nav-btn" data-view="tiffin">♡ <span>Tiffin tracker</span></button>
         <button class="nav-btn" data-view="timetable">◷ <span>Daily plan</span></button>
+        <button class="nav-btn" data-view="exam">✎ <span>Exam plan</span></button>
         <button class="nav-btn" data-view="gym">✦ <span>Gym plan</span></button>
       </nav>
       <div class="sidebar-note">
@@ -189,7 +191,7 @@
       <section id="timetable-view" class="view">
         <div class="page-intro"><p class="eyebrow">A ROUTINE THAT FITS REAL LIFE</p><h2>My daily timetable <span>♡</span></h2><p class="muted">College 10 AM–5 PM · Gym 5–7 PM · Tick each block as you complete it.</p></div>
         <article class="card timetable-card">
-          <div class="card-heading"><div><p class="eyebrow">TODAY'S FLOW</p><h3>One day at a time</h3></div><span class="pill" id="routine-date-label">Today</span></div>
+          <div class="card-heading"><div><p class="eyebrow">TODAY'S FLOW</p><h3>One day at a time</h3></div><div class="timetable-controls"><label class="exam-mode-toggle"><input id="exam-mode-toggle" type="checkbox"><span>Exam time</span></label><span class="pill" id="routine-date-label">Today</span></div></div>
           <div class="routine-progress"><span id="routine-progress-fill"></span></div><p class="muted small" id="routine-progress-label">0 of 10 blocks complete</p>
           <div class="daily-schedule" id="daily-schedule">
             <label class="schedule-item"><input type="checkbox" data-routine="wake"><span class="schedule-time">6:45–7:00</span><span class="schedule-copy"><strong>Wake up + freshen up</strong><small>Water, wash, make your bed</small></span><i class="schedule-dot lavender"></i></label>
@@ -205,8 +207,33 @@
             <label class="schedule-item"><input type="checkbox" data-routine="review"><span class="schedule-time">9:15–9:35</span><span class="schedule-copy"><strong>Daily recap + plan tomorrow</strong><small>Recall key points, choose top 3 tasks</small></span><i class="schedule-dot yellow"></i></label>
             <label class="schedule-item"><input type="checkbox" data-routine="sleep"><span class="schedule-time">10:15 PM</span><span class="schedule-copy"><strong>Wind down and sleep</strong><small>Aim for 7–9 hours of sleep</small></span><i class="schedule-dot green"></i></label>
           </div>
+          <div class="exam-daily-schedule hidden" id="exam-daily-schedule"></div>
           <p class="routine-footnote">If assignments or travel take longer, shorten coding or Japanese—not sleep. Keep the plan flexible ♡</p>
         </article>
+      </section>
+
+      <section id="exam-view" class="view">
+        <div class="page-intro"><p class="eyebrow">TURN NOTES INTO SMALL STEPS</p><h2>My exam plan <span>♡</span></h2><p class="muted">Upload a syllabus, timetable, question bank or notes and build a focused study plan.</p></div>
+        <article class="card exam-upload-card">
+          <div class="card-heading"><div><p class="eyebrow">START WITH YOUR MATERIAL</p><h3>Analyze exam documents</h3></div><span class="exam-icon">✎</span></div>
+          <div class="exam-settings">
+            <label><span>OmniRoute API key</span><input id="exam-api-key" type="password" autocomplete="off" placeholder="Paste your key for this session"></label>
+            <label><span>Exam date <small>(optional)</small></span><input id="exam-date" type="date"></label>
+          </div>
+          <label class="exam-dropzone" for="exam-files"><input id="exam-files" type="file" multiple accept=".txt,.md,.csv,.json,.pdf,.doc,.docx,.ppt,.pptx,image/*"><strong>＋ Choose files</strong><span>PDFs, images, notes, syllabi, question banks or text files</span></label>
+          <div id="exam-file-list" class="exam-file-list muted small">No files selected yet.</div>
+          <label class="exam-notes-label" for="exam-pasted-text">Add text or questions <small>(optional)</small></label>
+          <textarea id="exam-pasted-text" rows="4" placeholder="Paste a timetable, questions, or anything your notes should include…"></textarea>
+          <label class="exam-notes-label" for="exam-timetable-prompt">Change the study timetable <small>(optional instruction for the AI)</small></label>
+          <textarea id="exam-timetable-prompt" rows="3" placeholder="For example: keep college from 10–5, put difficult subjects in the morning, and leave 30 minutes for revision…"></textarea>
+          <div class="exam-actions"><button id="analyze-exam" class="primary-button" type="button">Analyze and build plan</button><span id="exam-status" class="muted small" role="status">Your documents are sent only when you start analysis.</span></div>
+        </article>
+        <div id="exam-results" class="exam-results hidden">
+          <div class="section-heading"><div><p class="eyebrow">YOUR MATERIAL, ORGANIZED</p><h2 id="exam-plan-title">Study plan</h2></div><button id="add-exam-tasks" class="secondary-button" type="button">＋ Add daily tasks</button></div>
+          <div class="exam-summary-grid" id="exam-summary-grid"></div>
+          <div class="exam-plan-grid"><article class="card exam-topics-card"><div class="card-heading"><h3>Subjects and important topics</h3><span class="pill">know the points</span></div><div id="exam-topics"></div></article><article class="card exam-days-card"><div class="card-heading"><h3>Day-to-day study plan</h3><span class="pill">small steps</span></div><div id="exam-days"></div></article></div>
+        </div>
+        <div id="exam-empty" class="empty-state"><span>✿</span><h3>Your study plan will bloom here</h3><p>Upload your first exam document to organize subjects, repeated question themes and daily revision.</p></div>
       </section>
 
       <section id="gym-view" class="view">

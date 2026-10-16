@@ -2,6 +2,7 @@
   const $ = (s, root=document) => root.querySelector(s);
   const $$ = (s, root=document) => [...root.querySelectorAll(s)];
   const STORAGE_KEY = "littleStepsPlanner.v1";
+  const EXAM_API_KEY_STORAGE_KEY = "littleStepsPlanner.omnirouteApiKey";
   const TIF_FIN_PRICE = 50;
   const now = new Date();
   const dateKey = d => `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
@@ -18,7 +19,7 @@
     {id:uid(),text:"Review notes and plan tomorrow",category:"College",done:false,priority:false}
   ];
   function uid(){ return (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(16).slice(2)}`); }
-  function freshState(){ return {tasks:{},tiffins:{},englishDone:{},notes:{},routines:{}}; }
+  function freshState(){ return {tasks:{},tiffins:{},englishDone:{},notes:{},routines:{},examPlan:null,examMode:false,examChecks:{}}; }
   function loadState(){ try { return Object.assign(freshState(),JSON.parse(localStorage.getItem(STORAGE_KEY)||"{}")); } catch { return freshState(); } }
   let state = loadState();
   // Migrate old per-day routine checklists into the single syncable planner state.
@@ -135,6 +136,7 @@
     if(view==="tasks") renderTaskManager();
     if(view==="tiffin") renderTiffin();
     if(view==="timetable") renderDailySchedule();
+    if(view==="exam") renderExamPlan();
     window.scrollTo({top:0,behavior:"smooth"});
   }
   function renderDate(){
@@ -228,18 +230,139 @@
     $("#tiffin-selected-title").textContent=longDate(selectedDate);$("#selected-tiffin-cost").textContent=`₹${selectedCount*TIF_FIN_PRICE}`;
     $$(".tiffin-option").forEach(btn=>btn.classList.toggle("selected",Number(btn.dataset.count)===selectedCount));
   }
-  function renderAll(){renderHome();renderTaskManager();if($("#calendar-view").classList.contains("active"))renderCalendar();if($("#tiffin-view").classList.contains("active"))renderTiffin();}
+  function renderAll(){renderHome();renderTaskManager();if($("#calendar-view").classList.contains("active"))renderCalendar();if($("#tiffin-view").classList.contains("active"))renderTiffin();if($("#exam-view").classList.contains("active"))renderExamPlan();}
+
+  function examStatus(message){const el=$("#exam-status");if(el)el.textContent=message;}
+  function renderExamPlan(){
+    const plan=state.examPlan, results=$("#exam-results"), empty=$("#exam-empty");
+    results.classList.toggle("hidden",!plan);empty.classList.toggle("hidden",!!plan);
+    if(!plan)return;
+    $("#exam-plan-title").textContent=plan.title||"Study plan";
+    const summary=$("#exam-summary-grid");summary.innerHTML="";
+    [["Subjects",(plan.subjects||[]).length], ["Important topics",(plan.topics||[]).length], ["Study days",(plan.days||[]).length]].forEach(([label,value])=>{const item=document.createElement("div");item.className="exam-summary-item";item.innerHTML=`<strong>${value}</strong><span>${label}</span>`;summary.append(item);});
+    const topics=$("#exam-topics");topics.innerHTML="";(plan.subjects||[]).forEach(subject=>{const block=document.createElement("div");block.className="exam-subject";const title=document.createElement("h4");title.textContent=subject.name||"Subject";block.append(title);(subject.topics||[]).forEach(topic=>{const row=document.createElement("div");row.className="exam-topic-row";const mark=document.createElement("span");mark.className="exam-topic-check";mark.textContent="□";const copy=document.createElement("span");const name=document.createElement("strong");name.textContent=topic.name||topic;copy.append(name);if(topic.points){const points=document.createElement("small");points.textContent=topic.points;copy.append(points);}if(topic.questionThemes){const themes=document.createElement("small");themes.textContent=`Question themes: ${topic.questionThemes}`;copy.append(themes);}row.append(mark,copy);block.append(row);});topics.append(block);});
+    const days=$("#exam-days");days.innerHTML="";(plan.days||[]).forEach(day=>{const item=document.createElement("div");item.className="exam-day";const date=document.createElement("div");date.className="exam-day-date";date.textContent=day.date||day.day||"Study day";const copy=document.createElement("div");const focus=document.createElement("strong");focus.textContent=day.focus||"Revision";const tasks=document.createElement("small");tasks.textContent=(day.tasks||[]).join(" · ");copy.append(focus,tasks);item.append(date,copy);days.append(item);});
+  }
+  function extractJson(text){const match=text.match(/\{[\s\S]*\}/);if(!match)throw new Error("The analysis did not return a study plan.");return JSON.parse(match[0]);}
+  async function readExamFile(file){
+    if(file.type.startsWith("text/")||/\.(txt|md|csv|json)$/i.test(file.name))return {name:file.name,text:await file.text()};
+    if(file.type==="application/pdf"&&window.pdfjsLib){const pdf=await window.pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise;let text="";for(let pageNumber=1;pageNumber<=pdf.numPages;pageNumber++){const page=await pdf.getPage(pageNumber);const content=await page.getTextContent();text+=content.items.map(item=>item.str).join(" ")+"\n";}return {name:file.name,text};}
+    if(file.type.startsWith("image/"))return {name:file.name,data:await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=()=>reject(new Error(`Could not read ${file.name}`));reader.readAsDataURL(file);})};
+    return {name:file.name,text:`[Uploaded file: ${file.name}. Extract its content if your OmniRoute model supports file attachments.]`};
+  }
+  async function analyzeExam(){
+    const key=$("#exam-api-key").value.trim()||localStorage.getItem(EXAM_API_KEY_STORAGE_KEY)||window.LITTLE_STEPS_CONFIG?.omnirouteApiKey||"";
+    const files=[...$("#exam-files").files];const pasted=$("#exam-pasted-text").value.trim();
+    if(!key){examStatus("Add your OmniRoute key above or set omnirouteApiKey in supabase-config.js.");return;}
+    if(!files.length&&!pasted){examStatus("Choose at least one document or paste some exam material first.");return;}
+    const button=$("#analyze-exam");button.disabled=true;examStatus("Reading your material and finding the important connections…");
+    try{
+      const materials=await Promise.all(files.map(readExamFile));
+      const textContent=[pasted?`Pasted material:\n${pasted}`:"",...materials.map(item=>item.text?`File ${item.name}:\n${item.text}`:`File ${item.name} is attached as an image or document.`)].filter(Boolean).join("\n\n");
+      const timetableChange=$("#exam-timetable-prompt").value.trim();
+      const prompt=`You are an expert exam study planner. Analyze all supplied material together. Identify any timetable or exam schedule in the notes, including exam dates, subjects, times and order. Find subjects from the syllabus, every topic and its required points, repeated question themes across the question bank, high-priority topics, and a realistic day-by-day plan. Apply this user's timetable change request when possible: ${timetableChange||"No timetable changes requested."} Return ONLY valid JSON with this shape: {"title":"string","examTimetable":[{"date":"string","time":"string","subject":"string"}],"subjects":[{"name":"string","topics":[{"name":"string","points":"string","questionThemes":"string"}]}],"topics":["topic names"],"days":[{"date":"YYYY-MM-DD or descriptive date","focus":"string","schedule":[{"time":"string","subject":"string","task":"string","notes":"string"}],"tasks":["small actionable task"]}]}. Keep tasks specific and balanced. Use the exam date ${$("#exam-date").value||"not provided"} only as a planning anchor; do not invent exam dates. Material:\n${textContent}`;
+      const imageParts=materials.filter(item=>item.data&&item.data.startsWith("data:image/")).map(item=>({type:"image_url",image_url:{url:item.data}}));
+      const baseUrl=window.LITTLE_STEPS_CONFIG?.omnirouteBaseUrl||"https://api.omniroute.ai/v1";
+      const model=window.LITTLE_STEPS_CONFIG?.omnirouteModel||"auto";
+      const response=await fetch(`${baseUrl.replace(/\/$/,"")}/chat/completions`,{method:"POST",headers:{"Content-Type":"application/json",Authorization:`Bearer ${key}`},body:JSON.stringify({model,messages:[{role:"user",content:[{type:"text",text:prompt},...imageParts]}],temperature:.2})});
+      if(!response.ok)throw new Error(`OmniRoute returned ${response.status}. Check the key and endpoint.`);
+      const payload=await response.json();const raw=payload.choices?.[0]?.message?.content||"";const plan=extractJson(typeof raw==="string"?raw:raw.map(part=>part.text||"").join(""));
+      plan.createdAt=new Date().toISOString();plan.sourceFiles=files.map(file=>file.name);state.examPlan=plan;save();renderExamPlan();examStatus("Your study plan is ready. Review it, then add the small steps to your to-do list.");toast("Exam plan created ♡");
+    }catch(error){examStatus(error.message||"I could not analyze those files. Try again with pasted text or a different file.");}
+    finally{button.disabled=false;}
+  }
+  const savedExamApiKey=localStorage.getItem(EXAM_API_KEY_STORAGE_KEY);
+  if(savedExamApiKey)$("#exam-api-key").value=savedExamApiKey;
+  $("#exam-api-key").addEventListener("input",event=>{const key=event.target.value.trim();if(key)localStorage.setItem(EXAM_API_KEY_STORAGE_KEY,key);});
+  $("#exam-files").addEventListener("change",()=>{$("#exam-file-list").textContent=[...$("#exam-files").files].map(file=>file.name).join(" · ")||"No files selected yet.";});
+  $("#analyze-exam").addEventListener("click",analyzeExam);
+  $("#add-exam-tasks").addEventListener("click",()=>{const plan=state.examPlan;if(!plan)return;let added=0;(plan.days||[]).forEach(day=>(day.tasks||[]).forEach(text=>{const date=day.date&&/^\d{4}-\d{2}-\d{2}$/.test(day.date)?day.date:dateKey(today);const tasks=getTasks(date);if(!tasks.some(task=>task.text===text)){tasks.push({id:uid(),text,category:"Exam",done:false,priority:tasks.filter(task=>task.priority).length<3});added++;}}));save();toast(`${added} exam tasks added to your planner ♡`);});
   const routineItems = ["wake","japanese","breakfast","revision","commute","dinner","coding","english","review","sleep"];
   function routineKey(){return dateKey(today);}
   function readRoutine(){return state.routines[routineKey()]||{};}
   function renderDailySchedule(){
     const done=readRoutine();
+    if($("#exam-mode-toggle"))$("#exam-mode-toggle").checked=!!state.examMode;
+    const examMode=!!state.examMode;
+    const regular=$("#daily-schedule"), exam=$("#exam-daily-schedule");
+    if(regular&&exam){regular.classList.toggle("hidden",examMode);exam.classList.toggle("hidden",!examMode);}
+    if(examMode){renderExamDailySchedule();return;}
     $$("[data-routine]").forEach(input=>{input.checked=!!done[input.dataset.routine];});
     const count=routineItems.filter(k=>done[k]).length;
     const fill=$("#routine-progress-fill");if(fill)fill.style.width=`${Math.round(count/routineItems.length*100)}%`;
     const label=$("#routine-progress-label");if(label)label.textContent=`${count} of ${routineItems.length} routine blocks complete`;
     const dateLabel=$("#routine-date-label");if(dateLabel)dateLabel.textContent=shortDate(today);
   }
+    $("#exam-mode-toggle").addEventListener("change", event => {
+      state.examMode = event.target.checked;
+      save();
+      renderDailySchedule();
+    });
+    function renderExamDailySchedule() {
+      const container = $("#exam-daily-schedule"), plan = state.examPlan;
+      if (!container) return;
+      container.innerHTML = "";
+      const label = $("#routine-progress-label"), fill = $("#routine-progress-fill"), dateLabel = $("#routine-date-label");
+      dateLabel.textContent = shortDate(today);
+      if (!plan) {
+        container.innerHTML = '<div class="exam-schedule-empty">Create an exam plan first, then turn on Exam time here.</div>';
+        label.textContent = "No exam plan yet";
+        fill.style.width = "0%";
+        return;
+      }
+      const key = dateKey(today), day = (plan.days || []).find(item => item.date === key) || ((plan.days || []).length === 1 ? plan.days[0] : null);
+      if (!day) {
+        container.innerHTML = '<div class="exam-schedule-empty">No exam study blocks are scheduled for today.</div>';
+        label.textContent = "0 exam blocks complete";
+        fill.style.width = "0%";
+        return;
+      }
+      const blocks = day.schedule || [];
+      const items = blocks.length ? blocks.map(block => ({
+        id: `${key}-${block.time || block.subject || block.task}`,
+        time: block.time || "Study",
+        title: block.subject || block.title || "Exam study",
+        detail: block.task || block.focus || block.notes || "Focused study block"
+      })) : ((day.tasks || []).map((task, index) => ({
+        id: `${key}-${index}-${task}`,
+        time: "Study",
+        title: task,
+        detail: day.focus || "Exam preparation"
+      })));
+      const checks = state.examChecks[key] || {};
+      let doneCount = 0;
+      items.forEach(item => {
+        const row = document.createElement("label");
+        row.className = "schedule-item exam-schedule-item";
+        const input = document.createElement("input");
+        input.type = "checkbox";
+        input.checked = !!checks[item.id];
+        if (input.checked) doneCount++;
+        input.addEventListener("change", () => {
+          const current = state.examChecks[key] || {};
+          current[item.id] = input.checked;
+          state.examChecks[key] = current;
+          save();
+          renderExamDailySchedule();
+        });
+        const time = document.createElement("span");
+        time.className = "schedule-time";
+        time.textContent = item.time;
+        const copy = document.createElement("span");
+        copy.className = "schedule-copy";
+        const title = document.createElement("strong");
+        title.textContent = item.title;
+        const detail = document.createElement("small");
+        detail.textContent = item.detail;
+        copy.append(title, detail);
+        const dot = document.createElement("i");
+        dot.className = "schedule-dot lavender";
+        row.append(input, time, copy, dot);
+        container.append(row);
+      });
+      label.textContent = `${doneCount} of ${items.length} exam blocks complete`;
+      fill.style.width = `${items.length ? Math.round(doneCount / items.length * 100) : 0}%`;
+    }
   $$("[data-routine]").forEach(input=>input.addEventListener("change",()=>{
     const done=readRoutine();done[input.dataset.routine]=input.checked;state.routines[routineKey()]=done;save();renderDailySchedule();
   }));
